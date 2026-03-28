@@ -4,7 +4,11 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <div className="bg-gradient-to-b from-white via-blue-50/40 to-sky-50 text-slate-800">
+    <div
+      className="relative min-h-screen bg-cover bg-center bg-no-repeat text-slate-800"
+      style={{ backgroundImage: "url('/api/landing-image')" }}
+    >
+      <div className="absolute inset-0 bg-white/35 backdrop-[brightness(0.92)]" />
       <header className="sticky top-0 z-20 border-b border-white/30 bg-white/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-4">
           <p className="text-lg font-semibold text-blue-700">MindCare Connect</p>
@@ -22,7 +26,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-12 md:py-16" />
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16" />
     </div>
   );
 }
