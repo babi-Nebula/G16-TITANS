@@ -90,9 +90,17 @@ export default function UserPage() {
           transactionDesc: "Fast Payment",
         }),
       });
-      const payload = (await response.json()) as { success: boolean; message?: string };
+      const payload = (await response.json()) as {
+        success: boolean;
+        message?: string;
+        error?: { errorMessage?: string };
+      };
       if (!response.ok || !payload.success) {
-        setMessage(payload.message ?? "Payment request failed.");
+        setMessage(
+          payload.error?.errorMessage
+            ? `${payload.message ?? "Payment request failed."} (${payload.error.errorMessage})`
+            : (payload.message ?? "Payment request failed."),
+        );
         return;
       }
       setMessage("M-Pesa payment request submitted. Admin can now approve or reject it.");
