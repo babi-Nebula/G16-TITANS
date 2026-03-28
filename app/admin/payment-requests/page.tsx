@@ -129,10 +129,10 @@ export default function AdminPaymentRequestsPage() {
                 Payment Requests
               </Link>
               <Link
-                href="/platform"
+                href="/admin"
                 className="block rounded-xl px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
               >
-                Open Care Platform
+                Open Doctor Directory
               </Link>
               <Link
                 href="/"
@@ -204,7 +204,9 @@ export default function AdminPaymentRequestsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-900">Reject Payment Request</h3>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Reject Payment Request (Admin)
+                </h3>
                 <button
                   type="button"
                   onClick={closeRejectModal}
@@ -215,7 +217,7 @@ export default function AdminPaymentRequestsPage() {
                 </button>
               </div>
               <p className="mb-2 text-sm text-slate-600">
-                Please write a reason before rejecting this request.
+                As admin, write the rejection reason before rejecting this request.
               </p>
               <textarea
                 value={rejectReason}

@@ -322,10 +322,10 @@ export default function AdminPage() {
                 Payment Requests
               </a>
               <a
-                href="/platform"
+                href="/admin/payment-requests"
                 className="block rounded-xl px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
               >
-                Open Care Platform
+                Open Payment Requests
               </a>
               <Link
                 href="/"

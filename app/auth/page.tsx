@@ -45,7 +45,7 @@ export default function AuthPage() {
       );
     }
 
-    router.push("/platform");
+    router.push("/admin");
   }
 
   return (

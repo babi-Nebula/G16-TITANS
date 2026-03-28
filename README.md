@@ -84,7 +84,7 @@ Implemented in `app/page.tsx` with animated, mobile-responsive sections:
 
 ### 2) Core System
 
-Implemented in `app/auth/page.tsx` and `app/platform/page.tsx`:
+Implemented in `app/auth/page.tsx` and `app/admin/page.tsx`:
 
 - **Authentication**: signup/login UI and local session bootstrap
 - **Psychiatrist Directory**: list of verified dummy doctors + profile details
