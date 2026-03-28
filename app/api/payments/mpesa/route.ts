@@ -12,6 +12,38 @@ function buildTimestamp() {
   return `${yyyy}${mm}${dd}${hh}${min}${ss}`;
 }
 
+function normalizePhoneNumber(input: string) {
+  return input.replace(/[^\d]/g, "");
+}
+
+async function getAccessTokenFromOAuth() {
+  const consumerKey = process.env.MPESA_CONSUMER_KEY;
+  const consumerSecret = process.env.MPESA_CONSUMER_SECRET;
+
+  if (!consumerKey || !consumerSecret) {
+    return null;
+  }
+
+  const oauthUrl =
+    process.env.MPESA_OAUTH_URL ??
+    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";
+
+  const credentials = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+  const response = await fetch(oauthUrl, {
+    method: "GET",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+    },
+  });
+
+  const payload = (await response.json()) as { access_token?: string };
+  if (!response.ok || !payload.access_token) {
+    return null;
+  }
+
+  return payload.access_token;
+}
+
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     payerName?: string;
@@ -31,7 +63,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const mpesaApiKey = process.env.MPESA_API_KEY;
+  const directToken = process.env.MPESA_API_KEY;
   const stkPushUrl = process.env.MPESA_STK_PUSH_URL;
   const businessShortCode = process.env.MPESA_BUSINESS_SHORT_CODE ?? "6564";
   const password = process.env.MPESA_PASSWORD;
@@ -39,14 +71,38 @@ export async function POST(request: NextRequest) {
     process.env.MPESA_CALLBACK_URL ??
     "https://webhook.site/852f46fe-65c6-406a-9466-06fce89d67a2";
 
-  if (!mpesaApiKey || !stkPushUrl || !password) {
+  if (!stkPushUrl || !password) {
     return NextResponse.json(
       {
         success: false,
         message:
-          "Missing M-Pesa configuration. Set MPESA_API_KEY, MPESA_STK_PUSH_URL, and MPESA_PASSWORD in .env.local",
+          "Missing M-Pesa configuration. Set MPESA_STK_PUSH_URL and MPESA_PASSWORD in .env.local",
       },
       { status: 500 },
+    );
+  }
+
+  const oauthToken = await getAccessTokenFromOAuth();
+  const accessToken = oauthToken ?? directToken;
+  if (!accessToken) {
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          "Missing M-Pesa access token. Provide MPESA_API_KEY (direct bearer token) or MPESA_CONSUMER_KEY + MPESA_CONSUMER_SECRET.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const normalizedPhone = normalizePhoneNumber(body.phoneNumber);
+  if (!normalizedPhone) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid phone number format.",
+      },
+      { status: 400 },
     );
   }
 
@@ -59,9 +115,9 @@ export async function POST(request: NextRequest) {
     Timestamp: timestamp,
     TransactionType: "CustomerPayBillOnline",
     Amount: body.amountEtb,
-    PartyA: body.phoneNumber,
+    PartyA: normalizedPhone,
     PartyB: businessShortCode,
-    PhoneNumber: body.phoneNumber,
+    PhoneNumber: normalizedPhone,
     CallBackURL: callbackUrl,
     AccountReference: body.accountReference ?? "MindCare",
     TransactionDesc: body.transactionDesc ?? "MindCare Payment",
@@ -79,20 +135,24 @@ export async function POST(request: NextRequest) {
     const mpesaRequest = await fetch(stkPushUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${mpesaApiKey}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
 
     responseText = await mpesaRequest.text();
-    mpesaResponse = responseText ? JSON.parse(responseText) : {};
+    try {
+      mpesaResponse = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      mpesaResponse = { raw: responseText };
+    }
 
     if (!mpesaRequest.ok) {
       return NextResponse.json(
         {
           success: false,
-          message: "M-Pesa request failed.",
+          message: `M-Pesa request failed with status ${mpesaRequest.status}.`,
           error: mpesaResponse,
         },
         { status: 502 },
@@ -111,7 +171,7 @@ export async function POST(request: NextRequest) {
 
   const stored = createPaymentRequest({
     payerName: body.payerName ?? "MindCare User",
-    phoneNumber: body.phoneNumber,
+    phoneNumber: normalizedPhone,
     amountEtb: body.amountEtb,
     merchantRequestId,
     transactionType: "CustomerPayBillOnline",
