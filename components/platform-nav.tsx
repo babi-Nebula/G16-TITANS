@@ -15,7 +15,7 @@ export default function PlatformNav({ userName }: PlatformNavProps) {
           <nav className="hidden items-center gap-4 text-sm font-medium text-slate-700 md:flex">
             <Link href="/">Home</Link>
             <Link href="/#about">About</Link>
-            <Link href="/auth">Book Now</Link>
+            <Link href="/patient">Patient Portal</Link>
           </nav>
         </div>
         <div className="text-sm text-slate-600">

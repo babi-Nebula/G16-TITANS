@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { languageOptions } from "@/lib/i18n";
 import { SupportedLanguage } from "@/lib/types";
@@ -15,6 +15,14 @@ export default function AuthPage() {
   const [language, setLanguage] = useState<SupportedLanguage>("en");
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const requestedMode = searchParams.get("mode");
+    if (requestedMode === "login" || requestedMode === "signup") {
+      setMode(requestedMode);
+    }
+  }, [searchParams]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +53,7 @@ export default function AuthPage() {
       );
     }
 
-    router.push("/admin");
+    router.push("/user");
   }
 
   return (

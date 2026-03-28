@@ -99,7 +99,9 @@ Implemented in `app/auth/page.tsx` and `app/admin/page.tsx`:
 ## API Endpoints
 
 - `POST /api/ai` - AI assistant response + sentiment hint
-- `POST /api/payments/mpesa` - M-Pesa STK Push simulation
+- `POST /api/payments/mpesa` - M-Pesa STK Push request (real API integration)
+- `GET /api/payments/requests` - List payment requests for admin/user views
+- `PATCH /api/payments/requests/:requestId` - Admin approve/reject a payment request
 - `POST /api/sos` - Emergency SOS alert simulation
 
 ---
@@ -233,9 +235,15 @@ For production integration, create `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 OPENAI_API_KEY=your_openai_api_key
+MPESA_API_KEY=your_mpesa_api_key
+MPESA_STK_PUSH_URL=your_mpesa_stk_push_endpoint
+MPESA_PASSWORD=base64_password_from_provider
+MPESA_BUSINESS_SHORT_CODE=6564
+MPESA_CALLBACK_URL=https://your-callback-url
 ```
 
-Hackathon demo works without these values by using mocks.
+For M-Pesa payments, set the `MPESA_*` variables.  
+User payments are submitted to M-Pesa and then appear in Admin Payment Requests for approval/rejection.
 
 ---
 

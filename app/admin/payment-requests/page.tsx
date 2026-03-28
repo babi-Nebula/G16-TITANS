@@ -1,66 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type PaymentStatus = "pending" | "approved" | "rejected";
 
 interface PaymentRequest {
   id: string;
-  doctorName: string;
+  payerName: string;
+  phoneNumber: string;
   amountEtb: number;
-  requestDate: string;
+  createdAt: string;
+  updatedAt: string;
+  merchantRequestId: string;
   status: PaymentStatus;
   rejectionReason?: string;
 }
 
-const initialPaymentRequests: PaymentRequest[] = [
-  {
-    id: "pay-1001",
-    doctorName: "Dr. Hana Abebe",
-    amountEtb: 3200,
-    requestDate: new Date().toISOString(),
-    status: "pending",
-  },
-  {
-    id: "pay-1002",
-    doctorName: "Dr. Mohammed Yusuf",
-    amountEtb: 2450,
-    requestDate: new Date().toISOString(),
-    status: "pending",
-  },
-  {
-    id: "pay-1003",
-    doctorName: "Dr. Saron Bekele",
-    amountEtb: 2800,
-    requestDate: new Date().toISOString(),
-    status: "approved",
-  },
-];
-
 export default function AdminPaymentRequestsPage() {
-  const [requests, setRequests] = useState<PaymentRequest[]>(initialPaymentRequests);
+  const [requests, setRequests] = useState<PaymentRequest[]>([]);
   const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectError, setRejectError] = useState("");
+  const [pageMessage, setPageMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const pendingCount = useMemo(
     () => requests.filter((request) => request.status === "pending").length,
     [requests],
   );
 
-  function updateStatus(id: string, status: PaymentStatus, rejectionReason?: string) {
-    setRequests((prev) =>
-      prev.map((request) =>
-        request.id === id
-          ? {
-              ...request,
-              status,
-              requestDate: new Date().toISOString(),
-              rejectionReason: status === "rejected" ? rejectionReason : undefined,
-            }
-          : request,
-      ),
-    );
+  async function loadRequests() {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/payments/requests");
+      const payload = (await response.json()) as {
+        success: boolean;
+        requests: PaymentRequest[];
+      };
+      setRequests(payload.requests ?? []);
+    } catch {
+      setPageMessage("Failed to load payment requests.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadRequests();
+  }, []);
+
+  async function updateStatus(id: string, status: PaymentStatus, rejectionReason?: string) {
+    setPageMessage("");
+    try {
+      const response = await fetch(`/api/payments/requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, rejectionReason }),
+      });
+      const payload = (await response.json()) as { success: boolean; message?: string };
+      if (!response.ok || !payload.success) {
+        setPageMessage(payload.message ?? "Could not update payment status.");
+        return false;
+      }
+      await loadRequests();
+      return true;
+    } catch {
+      setPageMessage("Could not update payment status.");
+      return false;
+    }
   }
 
   function openRejectModal(requestId: string) {
@@ -75,7 +82,7 @@ export default function AdminPaymentRequestsPage() {
     setRejectError("");
   }
 
-  function submitRejectReason() {
+  async function submitRejectReason() {
     if (!rejectingRequestId) {
       return;
     }
@@ -83,7 +90,10 @@ export default function AdminPaymentRequestsPage() {
       setRejectError("Please write a rejection reason.");
       return;
     }
-    updateStatus(rejectingRequestId, "rejected", rejectReason.trim());
+    const ok = await updateStatus(rejectingRequestId, "rejected", rejectReason.trim());
+    if (!ok) {
+      return;
+    }
     closeRejectModal();
   }
 
@@ -111,6 +121,12 @@ export default function AdminPaymentRequestsPage() {
             </div>
           </div>
         </section>
+
+        {pageMessage && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {pageMessage}
+          </p>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-12">
           <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3 lg:sticky lg:top-6 lg:h-fit">
@@ -144,6 +160,16 @@ export default function AdminPaymentRequestsPage() {
           </aside>
 
           <section className="space-y-3 lg:col-span-9">
+            {isLoading && (
+              <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                Loading payment requests...
+              </p>
+            )}
+            {!isLoading && requests.length === 0 && (
+              <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                No payment requests yet.
+              </p>
+            )}
             {requests.map((request) => (
               <article
                 key={request.id}
@@ -151,10 +177,13 @@ export default function AdminPaymentRequestsPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-base font-semibold text-slate-900">{request.doctorName}</p>
+                    <p className="text-base font-semibold text-slate-900">{request.payerName}</p>
                     <p className="text-xs text-slate-600">
-                      Request ID: {request.id} · Updated{" "}
-                      {new Date(request.requestDate).toLocaleString()}
+                      Request ID: {request.id} · Merchant ID: {request.merchantRequestId}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Phone: {request.phoneNumber} · Updated{" "}
+                      {new Date(request.updatedAt).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -176,7 +205,7 @@ export default function AdminPaymentRequestsPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => updateStatus(request.id, "approved")}
+                    onClick={() => void updateStatus(request.id, "approved")}
                     className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
                   >
                     Approve
